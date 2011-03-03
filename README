@@ -1,0 +1,4 @@
+tcphex v. 0.9
+Installation: You need picolisp installed. Unpack. Add to $PATH or make a symlink to tcphex.
+Usage help: tcphex -h
+Questions, comments, bugs, suggestions: meingbg at gmail dotcom or picolisp at software dash lab dot de
