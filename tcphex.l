@@ -79,7 +79,7 @@ Output format:
 	    (task *In (process T (make (in *In (while (and (poll *In) (rd -1) (link @)))))))
 	    (task *Out (process NIL (make (in *Out (while (and (poll *Out) (rd -1) (link @)))))))
 	    (m 3 "Entering loop")
-	    (while *Run (wait 10))
+	    (wait NIL (not *Run))
 	    (prinl (c *ConnectionDelimiter)) ) )
       (close Port) )
    (bye) )
@@ -96,7 +96,7 @@ Output format:
       ("-c" (setq *ByteCount (any Val)))
       ("-d" (setq *DelimCount (any Val)))
       ("-h" (showhelp))
-      ("-l" (on LowerCase))
+      ("-l" (on *LowerCase))
       ("-n" (off *Colorize))
       ("-s" (setq *Verbosity 0))
       ("-v" (inc '*Verbosity))
@@ -131,7 +131,7 @@ Output format:
 	       (for N *ByteCount
 		  (let Code (pop 'Data)
 		     (push 'Txt (printable Code))
-		     (push 'Hex (cons " " (if Code (hex2 Code LowerCase) "  ")))
+		     (push 'Hex (cons " " (if Code (hex2 Code *LowerCase) "  ")))
 		     (push 'Empty (unless Code (c *NoChar2)))
 		     (when (and (< 0 *DelimCount) (=0 (% N *DelimCount)) (not (= N *ByteCount)))
 			(ifn Data
