@@ -1,11 +1,12 @@
-(load (pack *AppDir "/getopts.l"))
+#!/usr/bin/picolisp /usr/lib/picolisp/lib.l
+(load "@ext.l")
 
 (de showhelp ()
    (m 1 "
 Usage:
-  "*AppExe" [-h]
+  tcphex [-h]
     Show usage help and exit.
-  "*AppExe" [options] listen-port [host] port
+  tcphex [options] listen-port [host] port
     Act as a tcp proxy: listen on localhost:listen-port,
     connect to host:port and display a realtime hexdump of
     data transmitted both ways. Only one connection at a
@@ -74,7 +75,7 @@ Output format:
       (while (setq *In (accept Port))
 	 (m 2 "Incoming connection")
 	 (let? *Out (or (connect *OutHost *OutPort)
-		       (prog (m 1 "Could not connect to server") (close *In) NIL) )
+		       (nil (m 1 "Could not connect to server") (close *In)) )
 	    (m 2 "Connected to server")
 	    (task *In (process T (make (in *In (while (and (poll *In) (rd -1) (link @)))))))
 	    (task *Out (process NIL (make (in *Out (while (and (poll *Out) (rd -1) (link @)))))))
@@ -84,11 +85,32 @@ Output format:
       (close Port) )
    (bye) )
 
+(de getopts (Opts Args)
+   (let Args (or Args (argv))
+      (make
+	 (recur (Args)
+	    (let (Arg (car Args)
+		    Args (cdr Args)
+		    Arg1 (car (chop Arg))
+		    Arg2 (pack (head 2 (chop Arg))) )
+	       (cond
+		  ((= Arg "--")
+		   (link (cons NIL Args)) )
+		  ((= Arg2 "--")
+		   (link (cons Arg (if (member Arg Opts) (pop 'Args) T)))
+		   (recurse Args) )
+		  ((= Arg1 "-")
+		   (link (cons Arg2 (if2 (member Arg2 Opts) (pack (cddr (chop Arg)))
+				       @ (pop 'Args) (prog (push 'Args (pack "-" @)) T) T ) ) )
+		   (recurse Args) )
+		  (Arg
+		     (link (cons NIL Arg Args)) ) ) ) ) ) ) )
+
 (de c (O) (cond ((sym? O) O) (*Colorize (list "^[[" (car O) "m" (cadr O) "^[[0m")) ((cddr O) (caddr O)) (T (cadr O))))
 
-(de die @ (m 1 (rest)) (bye))
+(de die @ (pass m 1) (bye))
 
-(de m (Level . @) (when (>= *Verbosity Level) (out 2 (prinl (pack (rest))))))
+(de m (Level . @) (when (>= *Verbosity Level) (out 2 (pass prinl))))
 
 (de processarg (Var Val)
    (case Var
@@ -110,7 +132,7 @@ Output format:
 
 (de process (Out? Data)
    (m 3 "In (process )" 'Out? Out? 'Data Data)
-   (when (or Data (stop Out?))
+   (when (or Data (nil (stop Out?)))
       (m 3 "Processing data")
       (out (if Out? *Out *In) (apply wr Data))
       (dbgwr Out? Data) )
@@ -120,40 +142,35 @@ Output format:
    (close *In) (task *In) (off *In)
    (close *Out) (task *Out) (off *Out)
    (m 3 "In (stop)")
-   (m 2 "Connection closed by " (if Out? "client." "server."))
-   NIL )
+   (m 2 "Connection closed by " (if Out? "client." "server.")))
 
 (de dbgwr (Out? Data)
    (let First T
-      (recur (First)
-	 (when Data
-	    (let (Empty NIL Hex NIL Txt NIL)
-	       (for N *ByteCount
-		  (let Code (pop 'Data)
-		     (push 'Txt (printable Code))
-		     (push 'Hex (cons " " (if Code (hex2 Code *LowerCase) "  ")))
-		     (push 'Empty (unless Code (c *NoChar2)))
-		     (when (and (< 0 *DelimCount) (=0 (% N *DelimCount)) (not (= N *ByteCount)))
-			(ifn Data
-			   (push 'Empty (c *NoChar2))
-			   (push 'Txt (c *TxtDelimiter))
-			   (push 'Hex (cons " " (c *TxtDelimiter))) ) ) ) )
-	       (prinl
-		  (pack
-		     (when First (c *BeforePacket))
-		     (c (if2 Out? First *MarkOut *MarkOut2 *MarkIn *MarkIn2))
-		     (unless Out? (c *Offset))
-		     (c *TxtBorder)
-		     (reverse Txt)
-		     (c *TxtBorder)
-		     (reverse Empty)
-		     (when Out? (c *Offset))
-		     (reverse Hex) ) ) )
-	    (recurse) ) ) ) )
+      (while Data
+	 (let (Empty NIL Hex NIL Txt NIL)
+	    (for N *ByteCount
+	       (let Code (pop 'Data)
+		  (push 'Txt (printable Code))
+		  (push 'Hex " " (if Code (hex2 Code *LowerCase) "  "))
+		  (push 'Empty (unless Code (c *NoChar2)))
+		  (when (and (< 0 *DelimCount) (=0 (% N *DelimCount)) (not (= N *ByteCount)))
+		     (ifn Data
+			(push 'Empty (c *NoChar2))
+			(push 'Txt (c *TxtDelimiter))
+			(push 'Hex " " (c *TxtDelimiter)) ) ) ) )
+	    (prinl
+	       (when First (c *BeforePacket))
+	       (c (if2 Out? First *MarkOut *MarkOut2 *MarkIn *MarkIn2))
+	       (unless Out? (c *Offset))
+	       (c *TxtBorder)
+	       (reverse Txt)
+	       (c *TxtBorder)
+	       (reverse Empty)
+	       (when Out? (c *Offset))
+	       (reverse Hex) ) )
+	 (off First) ) ) )
 
-(de hex2 (Num LowerCase)
-   (let H (tail 2 (cons "0" (chop (hex Num))))
-      (if LowerCase (lowc (pack H)) (pack H)) ) )
+(de hex2 (Num LowerCase) ((if LowerCase lowc '((X) X)) (pad 2 (hex Num))))
 
 (de printable (Char)
    (c (cond
@@ -163,6 +180,6 @@ Output format:
 	  (if *Colorize (list 45 (char (+ 64 Char))) *NonPrintable) )
 	 (T  *NonPrintable) ) ) )
 
-(unless (= "Success" (catch '(NIL) (main) "Success"))
-   (m 1 "Error") )
+(when (catch '(NIL) (nil (main)))
+   (m 1 "Error: " @) )
 (bye)
