@@ -108,23 +108,22 @@ Output format:
 (de getopts (Opts Args)
    (let Args (or Args (argv))
       (make
-	 (recur (Args)
-	    (let (Arg (car Args)
-		    Args (cdr Args)
+	 (while Args
+	    (let (Arg (pop 'Args)
 		    Arg1 (car (chop Arg))
 		    Arg2 (pack (head 2 (chop Arg))) )
 	       (cond
 		  ((= Arg "--")
-		   (link (cons NIL Args)) )
+		   (link (cons NIL Args))
+		   (off Args) )
 		  ((= Arg2 "--")
-		   (link (cons Arg (if (member Arg Opts) (pop 'Args) T)))
-		   (recurse Args) )
+		   (link (cons Arg (if (member Arg Opts) (pop 'Args) T))) )
 		  ((= Arg1 "-")
 		   (link (cons Arg2 (if2 (member Arg2 Opts) (pack (cddr (chop Arg)))
-				       @ (pop 'Args) (prog (push 'Args (pack "-" @)) T) T ) ) )
-		   (recurse Args) )
+				       @ (pop 'Args) (prog (push 'Args (pack "-" @)) T) T ) ) ) )
 		  (Arg
-		     (link (cons NIL Arg Args)) ) ) ) ) ) ) )
+		     (link (cons NIL Arg Args))
+		     (off Args) ) ) ) ) ) ) )
 
 (de c (O) (cond ((sym? O) O) (*Colorize (list "^[[" (car O) "m" (cadr O) "^[[0m")) ((cddr O) (caddr O)) (T (cadr O))))
 
