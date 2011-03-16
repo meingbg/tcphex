@@ -41,14 +41,14 @@ Output format:
 
 (de main ()
    (setq
-					#defaults:
+                                        #defaults:
       *OutHost "localhost"
       *Verbosity 1
-					#output format settings:
+                                        #output format settings:
       *Colorize T
       *ByteCount 16
       *DelimCount 4
-					#markers and colors:
+                                        #markers and colors:
       *BeforePacket "^J"
       *MarkOut (32 "-> ")
       *MarkOut2 "   "
@@ -73,20 +73,20 @@ Output format:
       (die "-d must specify an integer") )
    (let Port (port *InPort)
       (while (setq *In (accept Port))
-	 (m 2 "Incoming connection")
-	 (let? *Out (or (connect *OutHost *OutPort)
-		       (nil (m 1 "Could not connect to server") (close *In)) )
-	    (m 2 "Connected to server")
-	    (task *In (when *In
-			 (process T (make (m 3 "reading *In")
-				       (in *In (while (and (poll *In) (rd -1) (link @)))) ) ) ) )
-	    (task *Out (when *Out
-			  (process NIL (make (m 3 "reading *Out")
-					  (in *Out (while (and (poll *Out) (rd -1) (link @)))) ) ) ) )
-	    (m 3 "Entering loop")
-	    (wait NIL (not *Run))
-	    (m 3 "Exiting loop")
-	    (prinl (c *ConnectionDelimiter)) ) )
+         (m 2 "Incoming connection")
+         (let? *Out (or (connect *OutHost *OutPort)
+                       (nil (m 1 "Could not connect to server") (close *In)) )
+            (m 2 "Connected to server")
+            (task *In (when *In
+                         (process T (make (m 3 "reading *In")
+                                       (in *In (while (and (poll *In) (rd -1) (link @)))) ) ) ) )
+            (task *Out (when *Out
+                          (process NIL (make (m 3 "reading *Out")
+                                          (in *Out (while (and (poll *Out) (rd -1) (link @)))) ) ) ) )
+            (m 3 "Entering loop")
+            (wait NIL (not *Run))
+            (m 3 "Exiting loop")
+            (prinl (c *ConnectionDelimiter)) ) )
       (close Port) )
    (bye) )
 
@@ -108,22 +108,22 @@ Output format:
 (de getopts (Opts Args)
    (let Args (or Args (argv))
       (make
-	 (while Args
-	    (let (Arg (pop 'Args)
-		    Arg1 (car (chop Arg))
-		    Arg2 (pack (head 2 (chop Arg))) )
-	       (cond
-		  ((= Arg "--")
-		   (link (cons NIL Args))
-		   (off Args) )
-		  ((= Arg2 "--")
-		   (link (cons Arg (if (member Arg Opts) (pop 'Args) T))) )
-		  ((= Arg1 "-")
-		   (link (cons Arg2 (if2 (member Arg2 Opts) (pack (cddr (chop Arg)))
-				       @ (pop 'Args) (prog (push 'Args (pack "-" @)) T) T ) ) ) )
-		  (Arg
-		     (link (cons NIL Arg Args))
-		     (off Args) ) ) ) ) ) ) )
+         (while Args
+            (let (Arg (pop 'Args)
+                    Arg1 (car (chop Arg))
+                    Arg2 (pack (head 2 (chop Arg))) )
+               (cond
+                  ((= Arg "--")
+                   (link (cons NIL Args))
+                   (off Args) )
+                  ((= Arg2 "--")
+                   (link (cons Arg (if (member Arg Opts) (pop 'Args) T))) )
+                  ((= Arg1 "-")
+                   (link (cons Arg2 (if2 (member Arg2 Opts) (pack (cddr (chop Arg)))
+                                       @ (pop 'Args) (prog (push 'Args (pack "-" @)) T) T ) ) ) )
+                  (Arg
+                     (link (cons NIL Arg Args))
+                     (off Args) ) ) ) ) ) ) )
 
 (de c (O) (cond ((sym? O) O) (*Colorize (list "^[[" (car O) "m" (cadr O) "^[[0m")) ((cddr O) (caddr O)) (T (cadr O))))
 
@@ -142,11 +142,11 @@ Output format:
       ("-s" (setq *Verbosity 0))
       ("-v" (inc '*Verbosity))
       (NIL
-	 (unless (member (length Val) (2 3))
-	    (die "Command line syntax error") )
-	 (setq *InPort (any (pop 'Val)))
-	 (when (cdr Val) (setq *OutHost (pop 'Val)))
-	 (setq *OutPort (any (pop 'Val))) )
+         (unless (member (length Val) (2 3))
+            (die "Command line syntax error") )
+         (setq *InPort (any (pop 'Val)))
+         (when (cdr Val) (setq *OutHost (pop 'Val)))
+         (setq *OutPort (any (pop 'Val))) )
       (T (die "Unknown option: " Var)) ) )
 
 (de process (Out? Data)
@@ -161,43 +161,43 @@ Output format:
    (close *In) (task *In) (off *In)
    (close *Out) (task *Out) (off *Out)
    (m 3 "In (stop)")
-   (m 2 "Connection closed by " (if Out? "client." "server.")))
+   (m 2 "Connection closed by " (if Out? "client." "server.")) )
 
 (de dbgwr (Out? Data)
    (let First T
       (while Data
-	 (let (Empty NIL Hex NIL Txt NIL)
-	    (for N *ByteCount
-	       (let Code (pop 'Data)
-		  (push 'Txt (printable Code))
-		  (push 'Hex " " (if Code (hex2 Code *LowerCase) "  "))
-		  (push 'Empty (unless Code (c *NoChar2)))
-		  (when (and (< 0 *DelimCount) (=0 (% N *DelimCount)) (not (= N *ByteCount)))
-		     (ifn Data
-			(push 'Empty (c *NoChar2))
-			(push 'Txt (c *TxtDelimiter))
-			(push 'Hex " " (c *TxtDelimiter)) ) ) ) )
-	    (prinl
-	       (when First (c *BeforePacket))
-	       (c (if2 Out? First *MarkOut *MarkOut2 *MarkIn *MarkIn2))
-	       (unless Out? (c *Offset))
-	       (c *TxtBorder)
-	       (reverse Txt)
-	       (c *TxtBorder)
-	       (reverse Empty)
-	       (when Out? (c *Offset))
-	       (reverse Hex) ) )
-	 (off First) ) ) )
+         (let (Empty NIL Hex NIL Txt NIL)
+            (for N *ByteCount
+               (let Code (pop 'Data)
+                  (push 'Txt (printable Code))
+                  (push 'Hex " " (if Code (hex2 Code *LowerCase) "  "))
+                  (push 'Empty (unless Code (c *NoChar2)))
+                  (when (and (< 0 *DelimCount) (=0 (% N *DelimCount)) (not (= N *ByteCount)))
+                     (ifn Data
+                        (push 'Empty (c *NoChar2))
+                        (push 'Txt (c *TxtDelimiter))
+                        (push 'Hex " " (c *TxtDelimiter)) ) ) ) )
+            (prinl
+               (when First (c *BeforePacket))
+               (c (if2 Out? First *MarkOut *MarkOut2 *MarkIn *MarkIn2))
+               (unless Out? (c *Offset))
+               (c *TxtBorder)
+               (reverse Txt)
+               (c *TxtBorder)
+               (reverse Empty)
+               (when Out? (c *Offset))
+               (reverse Hex) ) )
+         (off First) ) ) )
 
 (de hex2 (Num LowerCase) ((if LowerCase lowc '((X) X)) (pad 2 (hex Num))))
 
 (de printable (Char)
    (c (cond
-	 ((not Char) *NoChar)
-	 ((and (>= Char 32) (<= Char 126)) (char Char))
-	 ((and (>= Char 0) (<= Char 31))
-	  (if *Colorize (list 45 (char (+ 64 Char))) *NonPrintable) )
-	 (T  *NonPrintable) ) ) )
+         ((not Char) *NoChar)
+         ((and (>= Char 32) (<= Char 126)) (char Char))
+         ((and (>= Char 0) (<= Char 31))
+          (if *Colorize (list 45 (char (+ 64 Char))) *NonPrintable) )
+         (T  *NonPrintable) ) ) )
 
 (when (catch '(NIL) (nil (main)))
    (m 1 "Error: " @) )
