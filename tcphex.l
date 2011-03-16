@@ -77,10 +77,15 @@ Output format:
 	 (let? *Out (or (connect *OutHost *OutPort)
 		       (nil (m 1 "Could not connect to server") (close *In)) )
 	    (m 2 "Connected to server")
-	    (task *In (process T (make (in *In (while (and (poll *In) (rd -1) (link @)))))))
-	    (task *Out (process NIL (make (in *Out (while (and (poll *Out) (rd -1) (link @)))))))
+	    (task *In (when *In
+			 (process T (make (m 3 "reading *In")
+				       (in *In (while (and (poll *In) (rd -1) (link @)))) ) ) ) )
+	    (task *Out (when *Out
+			  (process NIL (make (m 3 "reading *Out")
+					  (in *Out (while (and (poll *Out) (rd -1) (link @)))) ) ) ) )
 	    (m 3 "Entering loop")
 	    (wait NIL (not *Run))
+	    (m 3 "Exiting loop")
 	    (prinl (c *ConnectionDelimiter)) ) )
       (close Port) )
    (bye) )
